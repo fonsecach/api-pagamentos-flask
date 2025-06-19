@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'secret_key_websocket'
 
 # Inicializa o banco
 db.init_app(app)
-app.register_blueprint(bp)
+app.register_blueprint(bp, url_prefix='/payments')
 
 with app.app_context():
     db.create_all()
