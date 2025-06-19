@@ -38,6 +38,7 @@ class Pix:
         # Save the QR code to a file
         qr.save(qr_code_path)
 
+        
         new_payment = Payment(
             value=value,
             bank_payment_id=data.get('bank_payment_id'),

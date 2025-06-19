@@ -1,5 +1,8 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from src.services.pix import Pix
+from src.models.payment import Payment
+from src.repository.database import db
+import os
 
 bp = Blueprint('payments', __name__)
 pix_service = Pix()
@@ -24,6 +27,18 @@ def create_payment_pix():
     response.headers['Location'] = result['location']
     return response
 
+@bp.route('/pix/qr/<string:qr_code_filename>', methods=['GET'])
+def get_qr_code(qr_code_filename):
+    payment = db.session.query(Payment).filter_by(qr_code=qr_code_filename).first()
+    if not payment:
+        return jsonify({'error': 'File not found'}), 404
+
+    # Construct the full file path
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'img', qr_code_filename)
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
+
+    return send_file(file_path, mimetype="image/png")
 
 # @bp.route('/pix/confirmation', methods=['POST'])
 # def confirm_payment_pix():
