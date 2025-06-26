@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, render_template, request, send_file
 from src.services.pix import Pix
 from src.models.payment import Payment
 from src.repository.database import db
+from src.extensions import socketio
 import os
 
 bp = Blueprint('payments', __name__)
@@ -10,6 +11,7 @@ pix_service = Pix()
 @bp.route('/')
 def index():
     return jsonify({'message': 'Hello from api-pagamentos-flask!'})
+
 
 @bp.route('/pix', methods=['POST'])
 def create_payment_pix():
@@ -26,6 +28,7 @@ def create_payment_pix():
     response.status_code = result['status_code']
     response.headers['Location'] = result['location']
     return response
+
 
 @bp.route('/pix/qr_code/<string:qr_code_filename>', methods=['GET'])
 def get_qr_code(qr_code_filename):
@@ -44,6 +47,7 @@ def get_qr_code(qr_code_filename):
 def confirm_payment_pix():
     return jsonify({'message': 'Payment confirmed successfully!'})
 
+
 @bp.route('/pix/<int:payment_id>', methods=['GET'])
 def get_payment_pix(payment_id):
     payment = Payment.query.get(payment_id)
@@ -56,4 +60,8 @@ def get_payment_pix(payment_id):
                             value=payment.value,
                             host='http://127.0.0.1:5000',
                             qr_code=payment.qr_code)
-    
+
+# websocket event
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
