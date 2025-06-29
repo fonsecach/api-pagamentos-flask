@@ -45,20 +45,38 @@ def get_qr_code(qr_code_filename):
 
 @bp.route('/pix/confirmation', methods=['POST'])
 def confirm_payment_pix():
+    data = request.get_json()
+    
+    if 'bank_payment_id' not in data:
+        return jsonify({'error': 'bank_payment_id is required'}), 400
+    
+    payment = Payment.query.filter_by(bank_payment_id=data.get('bank_payment_id')).first()
+    if not payment or payment.paid:
+        return jsonify({'error': 'Payment not found'}), 404
+    
+    if data.get('value')!= payment.value:
+        return jsonify({'error': 'Invalid payment data'}), 400
+    
+    payment.paid = True
+    db.session.commit()
+    socketio.emit('Payment_confirmed', {'payment_id': payment.id})
     return jsonify({'message': 'Payment confirmed successfully!'})
 
 
 @bp.route('/pix/<int:payment_id>', methods=['GET'])
 def get_payment_pix(payment_id):
     payment = Payment.query.get(payment_id)
-    
     if not payment:
+        
         return jsonify({'error': 'Payment not found'}), 404
     
+    if payment.paid:
+        return render_template('confirmed_payment.html', qr_code=payment.qr_code)
+    
+
     return render_template('payment.html',
                             payment_id=payment.id,
                             value=payment.value,
-                            host='http://127.0.0.1:5000',
                             qr_code=payment.qr_code)
 
 # websocket event
