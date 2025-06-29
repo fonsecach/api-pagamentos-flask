@@ -11,13 +11,17 @@ class Pix:
         pass
 
     def create_payment(self, data):
-        if not data or 'value' not in data:
+        # Verifica se o campo 'value' existe
+        if 'value' not in data:
             return {'error': 'Missing value field'}, 400
-
+        # Verifica se o valor é numérico
         try:
             value = float(data['value'])
         except (ValueError, TypeError):
             return {'error': 'Invalid value type'}, 400
+        # Verifica se o valor é positivo
+        if value <= 0:
+            return {'error': 'Value must be greater than zero'}, 400
 
         expiration_date = datetime.now() + timedelta(minutes=30)
 
