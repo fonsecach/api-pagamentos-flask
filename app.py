@@ -47,3 +47,5 @@ def create_socketio_app():
 if __name__ == '__main__':
     app, socketio_instance = create_socketio_app()
     socketio_instance.run(app, debug=True)
+
+    app = create_app()

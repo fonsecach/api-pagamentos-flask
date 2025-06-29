@@ -5,7 +5,7 @@ name: Fly Deploy
 on:
   push:
     branches:
-      - master
+      - main  # Sugestão: usar 'main' como branch principal
 
 jobs:
   test:
@@ -21,22 +21,29 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Instalar dependências com uv
-        run: uv run sync --no-cache
+        # 'uv sync' é suficiente aqui, pois ele já instala no ambiente ativo.
+        run: uv sync
 
       - name: Executar testes com pytest
+        # 'uv run' é perfeito aqui para garantir que o pytest do venv seja usado.
         run: uv run pytest
 
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
     needs: test             
-    concurrency: deploy-group
+    concurrency: 
+      group: deploy-group # Garante que apenas um deploy ocorra por vez
+      cancel-in-progress: true # Cancela deploys antigos se um novo push for feito
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Configurar flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy para Fly.io
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+

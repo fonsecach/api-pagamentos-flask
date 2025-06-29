@@ -1,32 +1,44 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.13-slim-bookworm
 
-# Instala curl e certificados necessários para instalar o uv
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala o uv
+# Install uv package manager globally
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 
-# Define o PATH com o binário do uv
-ENV PATH="/root/.local/bin/:$PATH"
+# Make uv available system-wide
+RUN cp /root/.local/bin/uv /usr/local/bin/uv
 
-# Diretório de trabalho
+# Create non-root user
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
+# Set working directory and change ownership
 WORKDIR /app
+RUN chown -R appuser:appuser /app
 
-# Copia arquivos essenciais
-COPY pyproject.toml uv.lock ./
+# Switch to non-root user
+USER appuser
 
-# Instala dependências do projeto
-RUN uv sync --no-cache
+# Copy dependency files first for better layer caching
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
 
-# Copia o restante da aplicação
-COPY . .
+# Create virtual environment and install dependencies
+RUN uv venv .venv
+RUN uv sync
 
-# Expondo a porta do Flask (Fly.io usa 8080)
+# Add virtual environment to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy application source code
+COPY --chown=appuser:appuser . .
+
+# Expose port
 EXPOSE 8080
 
-# Comando de inicialização
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+# Use uv run to ensure proper virtual environment activation
+CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:8080", "wsgi:app"]
