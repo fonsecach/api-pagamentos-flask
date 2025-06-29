@@ -66,14 +66,13 @@ def confirm_payment_pix():
 @bp.route('/pix/<int:payment_id>', methods=['GET'])
 def get_payment_pix(payment_id):
     payment = Payment.query.get(payment_id)
+    
     if not payment:
-        
-        return jsonify({'error': 'Payment not found'}), 404
+        return render_template('404.html', message='Payment not found'), 404
     
     if payment.paid:
         return render_template('confirmed_payment.html', qr_code=payment.qr_code)
     
-
     return render_template('payment.html',
                             payment_id=payment.id,
                             value=payment.value,
@@ -83,3 +82,7 @@ def get_payment_pix(payment_id):
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
+    
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
